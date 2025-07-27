@@ -259,10 +259,14 @@ def updateActivePower(shortaddr, endpoint, value, friendlyname):
         Devices[shortaddr].Units[endpoint].Update(Log=True)
         Domoticz.Log("Update {} {} Power {}".format(friendlyname,endpoint,str(value)))
         create=False
+#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options)
+#        Domoticz.Log(type(Devices[shortaddr].Units[endpoint].Options))
+#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode'])
     if create:
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype='kWh',name=friendlyname+' Watt',nvalue=0,svalue=str(value)+';0')
-        Devices[shortaddr].Units[endpoint].Options="EnergyMeterMode=1"
+        Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode']='1'
         Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
+#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options)
 
 def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
     create = True
@@ -274,9 +278,9 @@ def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
         power=parts[0]
         Devices[shortaddr].Units[endpoint].nValue = 0
         Devices[shortaddr].Units[endpoint].sValue = power+';'+str(int(value,0))
-        if Devices[shortaddr].Units[endpoint].Options == "EnergyMeterMode=1":
-            Devices[shortaddr].Units[endpoint].Options="EnergyMeterMode=0"
-            Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
+        if 'EnergyMeterMode' in Devices[shortaddr].Units[endpoint].Options and Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode']=='1':
+            Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode']='0'
+            Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True, Log=True)
         else:
             Devices[shortaddr].Units[endpoint].Update(Log=True)
         Domoticz.Log("Update {} {} CurrentSummation {}".format(friendlyname,endpoint,str(int(value,0))))
