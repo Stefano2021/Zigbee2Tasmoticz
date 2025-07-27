@@ -125,8 +125,18 @@ class Handler:
                     updateSwitch(device, unit, message['ZbReceived'][key]['Occupancy'], friendlyname)
                 if 'Illuminance' in message['ZbReceived'][key]:
                     updateLightsensor(device, unit, message['ZbReceived'][key]['Illuminance'], friendlyname)
+                if 'RMSCurrent' in message['ZbReceived'][key]: # "Current (Single)" (243 - 23)  "Voltage" (243 - 8) "kWh" (243 - 29) Options={'EnergyMeterMode': '1' } calculated
+                    updateSimpledev(device + 'A', unit, message['ZbReceived'][key]['RMSCurrent'], friendlyname+' Ampere', 'Current (Single)')
+                if 'RMSVoltage' in message['ZbReceived'][key]:
+                    updateSimpledev(device + 'V', unit, message['ZbReceived'][key]['RMSVoltage'], friendlyname+' Volt', 'Voltage')
+                if 'ActivePower' in message['ZbReceived'][key]:
+                    updateActivePower(device + 'W', unit, message['ZbReceived'][key]['ActivePower'], friendlyname)
+                if 'CurrentSummationDelivered' in message['ZbReceived'][key]:
+                    updateCurrentSummation(device + 'W', unit, message['ZbReceived'][key]['CurrentSummationDelivered'], friendlyname)
+                # int(value, 16) (currentsummation) leistung alleine 248-1 "Usage"
+                # ActivePower, CurrentSummationDelivered
                 if 'Custom' in message['ZbReceived'][key]: # add custom value in .zb file in gateway
-                   updateCustom(device, unit, message['ZbReceived'][key]['Custom'], friendlyname)
+                    updateSimpledev(device + 'C', unit, message['ZbReceived'][key]['Custom'], friendlyname, 'Custom')
 
     def checkTimeoutDevices(self, timeout):
         now = time.time()
@@ -236,18 +246,56 @@ def updateLightsensor(shortaddr, endpoint, illuminance, friendlyname):
     if create:
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Illumination",name=friendlyname,nvalue=0,svalue=str(lux))
 
-def updateCustom(shortaddr, endpoint, custom, friendlyname):
+def updateActivePower(shortaddr, endpoint, value, friendlyname):
+    create = True
+    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
+        if Devices[shortaddr].TimedOut == 1:
+            Devices[shortaddr].TimedOut = 0
+        svalue=Devices[shortaddr].Units[endpoint].sValue
+        parts=svalue.split(';')
+        energy=parts[2]
+        Devices[shortaddr].Units[endpoint].nValue = 0
+        Devices[shortaddr].Units[endpoint].sValue = str(value)+';'+energy
+        Devices[shortaddr].Units[endpoint].Update(Log=True)
+        Domoticz.Log("Update {} {} Power {}".format(friendlyname,endpoint,str(value)))
+        create=False
+    if create:
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype='kWh',name=friendlyname+' Watt',nvalue=0,svalue=str(value)+';0')
+        Devices[shortaddr].Units[endpoint].Options="EnergyMeterMode=1"
+        Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
+
+def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
+    create = True
+    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
+        if Devices[shortaddr].TimedOut == 1:
+            Devices[shortaddr].TimedOut = 0
+        svalue=Devices[shortaddr].Units[endpoint].sValue
+        parts=svalue.split(';')
+        power=parts[1]
+        Devices[shortaddr].Units[endpoint].nValue = 0
+        Devices[shortaddr].Units[endpoint].sValue = power+';'+str(int(value,0))
+        if Devices[shortaddr].Units[endpoint].Options == "EnergyMeterMode=1":
+            Devices[shortaddr].Units[endpoint].Options="EnergyMeterMode=0"
+            Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
+        else:
+            Devices[shortaddr].Units[endpoint].Update(Log=True)
+        Domoticz.Log("Update {} {} CurrentSummation {}".format(friendlyname,endpoint,str(int(value,0))))
+        create=False
+    if create:
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype='kWh',name=friendlyname+' Watt',nvalue=0,svalue='0;'+str(int(value,0)))
+
+def updateSimpledev(shortaddr, endpoint, value, friendlyname, devicetype):
     create = True
     if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
         if Devices[shortaddr].TimedOut == 1:
             Devices[shortaddr].TimedOut = 0
         Devices[shortaddr].Units[endpoint].nValue = 0
-        Devices[shortaddr].Units[endpoint].sValue = str(custom)
+        Devices[shortaddr].Units[endpoint].sValue = str(value)
         Devices[shortaddr].Units[endpoint].Update(Log=True)
-        Domoticz.Log("Update {} {} Lux {}".format(friendlyname,endpoint,str(custom)))
+        Domoticz.Log("Update {} {} {} {}".format(friendlyname,endpoint,devicetype,str(value)))
         create=False
     if create:
-        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Custom",name=friendlyname,nvalue=0,svalue=str(custom))
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype=devicetype,name=friendlyname,nvalue=0,svalue=str(value))
 
 def updateBatteryPercentage(shortaddr, endpoint, battery_percentage, friendlyname):
     if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
