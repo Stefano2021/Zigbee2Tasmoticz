@@ -253,7 +253,7 @@ def updateActivePower(shortaddr, endpoint, value, friendlyname):
             Devices[shortaddr].TimedOut = 0
         svalue=Devices[shortaddr].Units[endpoint].sValue
         parts=svalue.split(';')
-        energy=parts[2]
+        energy=parts[1]
         Devices[shortaddr].Units[endpoint].nValue = 0
         Devices[shortaddr].Units[endpoint].sValue = str(value)+';'+energy
         Devices[shortaddr].Units[endpoint].Update(Log=True)
@@ -271,7 +271,7 @@ def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
             Devices[shortaddr].TimedOut = 0
         svalue=Devices[shortaddr].Units[endpoint].sValue
         parts=svalue.split(';')
-        power=parts[1]
+        power=parts[0]
         Devices[shortaddr].Units[endpoint].nValue = 0
         Devices[shortaddr].Units[endpoint].sValue = power+';'+str(int(value,0))
         if Devices[shortaddr].Units[endpoint].Options == "EnergyMeterMode=1":
