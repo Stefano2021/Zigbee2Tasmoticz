@@ -133,8 +133,6 @@ class Handler:
                     updateActivePower(device + 'W', unit, message['ZbReceived'][key]['ActivePower'], friendlyname)
                 if 'CurrentSummationDelivered' in message['ZbReceived'][key]:
                     updateCurrentSummation(device + 'W', unit, message['ZbReceived'][key]['CurrentSummationDelivered'], friendlyname)
-                # int(value, 16) (currentsummation) leistung alleine 248-1 "Usage"
-                # ActivePower, CurrentSummationDelivered
                 if 'Custom' in message['ZbReceived'][key]: # add custom value in .zb file in gateway
                     updateSimpledev(device + 'C', unit, message['ZbReceived'][key]['Custom'], friendlyname, 'Custom')
 
@@ -174,7 +172,6 @@ def updateTemp(shortaddr, endpoint, temperature, friendlyname):
             Devices[shortaddr].Units[endpoint].Update(Log=True)
             Domoticz.Log("Update {} {} Temp {}".format(friendlyname,endpoint,temperature))
         elif Devices[shortaddr].Units[endpoint].Type == 81: #Humidity
-#            humidity=Devices[shortaddr].Units[endpoint].nValue
             Devices[shortaddr].Units[endpoint].Update(TypeName = "Temp+Hum", UpdateProperties=True)
             Devices[shortaddr].Units[endpoint].sValue = "{:.1f};{};{}".format(temperature, Devices[shortaddr].Units[endpoint].nValue, 0)
             Devices[shortaddr].Units[endpoint].nValue = 0
@@ -259,14 +256,10 @@ def updateActivePower(shortaddr, endpoint, value, friendlyname):
         Devices[shortaddr].Units[endpoint].Update(Log=True)
         Domoticz.Log("Update {} {} Power {}".format(friendlyname,endpoint,str(value)))
         create=False
-#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options)
-#        Domoticz.Log(type(Devices[shortaddr].Units[endpoint].Options))
-#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode'])
     if create:
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype='kWh',name=friendlyname+' Watt',nvalue=0,svalue=str(value)+';0')
         Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode']='1'
         Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
-#        Domoticz.Log(Devices[shortaddr].Units[endpoint].Options)
 
 def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
     create = True
@@ -287,6 +280,8 @@ def updateCurrentSummation(shortaddr, endpoint, value, friendlyname):
         create=False
     if create:
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype='kWh',name=friendlyname+' Watt',nvalue=0,svalue='0;'+str(int(value,0)))
+        Devices[shortaddr].Units[endpoint].Options['EnergyMeterMode']='0'
+        Devices[shortaddr].Units[endpoint].Update(UpdateOptions=True)
 
 def updateSimpledev(shortaddr, endpoint, value, friendlyname, devicetype):
     create = True
@@ -302,19 +297,21 @@ def updateSimpledev(shortaddr, endpoint, value, friendlyname, devicetype):
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype=devicetype,name=friendlyname,nvalue=0,svalue=str(value))
 
 def updateBatteryPercentage(shortaddr, endpoint, battery_percentage, friendlyname):
-    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
-        Devices[shortaddr].Units[endpoint].BatteryLevel=int(battery_percentage)
-        Devices[shortaddr].Units[endpoint].Update(UpdateProperties=True)
-        Domoticz.Log("Update {} {} Batt {}".format(friendlyname,endpoint,battery_percentage))
+    for device_id in Devices:
+        if device_id.startswith(shortaddr) and endpoint in Devices[device_id].Units:
+            Devices[shortaddr].Units[endpoint].BatteryLevel = int(battery_percentage)
+            Devices[shortaddr].Units[endpoint].Update(UpdateProperties=True)
+            Debug("Update {} {} (Device {}) Batt {}".format(friendlyname, endpoint, device_id, battery_percentage))
 
 def updateBatteryVoltage(shortaddr, endpoint, battery_voltage, friendlyname): #do nothing
     Debug("Device: {}, Unit {}, Battery Voltage: {}".format(friendlyname, endpoint, battery_voltage))
 
 def updateLinkQuality(shortaddr, endpoint, link_quality, friendlyname):
-    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
-        Devices[shortaddr].Units[endpoint].SignalLevel=int(min(round(link_quality/254*12),12))
-        Devices[shortaddr].Units[endpoint].Update(UpdateProperties=True)
-        Debug("Update {} {} LQI {}".format(friendlyname,endpoint,link_quality))
+    for device_id in Devices:
+        if device_id.startswith(shortaddr) and endpoint in Devices[device_id].Units:
+            Devices[device_id].Units[endpoint].SignalLevel = int(min(round(link_quality / 254 * 12), 12))
+            Devices[device_id].Units[endpoint].Update(UpdateProperties=True)
+            Debug("Update {} {} (Device {}) LQI {}".format(friendlyname, endpoint, device_id, link_quality))
 
 def timedSwitch(shortaddr, endpoint, powerontime, poweroffwait, poweronlywhenon, friendlyname):
     # Not implemented: PowerOffWait
