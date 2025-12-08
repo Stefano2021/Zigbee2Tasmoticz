@@ -84,50 +84,56 @@ class Handler:
     # Process incoming MQTT messages from Tasmota devices
     def onMQTTPublish(self, topic, message):
         Debug("Handler::onMQTTPublish: topic: {}, message {}".format(topic,message))
+        msg = None
+        keys = None
         if 'ZbReceived' in message:
             keys=list(message['ZbReceived'].keys())
-            for key in keys:
-                device = message['ZbReceived'][key]['Device']
-                if 'Name' in message['ZbReceived'][key]:
-                    friendlyname = message['ZbReceived'][key]['Name']
-                else:
-                    friendlyname = message['ZbReceived'][key]['Device']
-                if 'Endpoint' in message['ZbReceived'][key]: # and message['ZbReceived'][key]['Endpoint'] > 1:
-                    unit = message['ZbReceived'][key]['Endpoint']
-                else:
-                    unit = 1
-                if 'Temperature' in message['ZbReceived'][key]:
-                    updateTemp(device, unit ,message['ZbReceived'][key]['Temperature'], friendlyname)
-                if 'Humidity' in message['ZbReceived'][key]:
-                    updateHumidity(device, unit, message['ZbReceived'][key]['Humidity'], friendlyname)
-                if 'BatteryPercentage' in message['ZbReceived'][key]:
-                    updateBatteryPercentage(device, unit, message['ZbReceived'][key]['BatteryPercentage'], friendlyname)
-                if 'BatteryVoltage' in message['ZbReceived'][key]:
-                    updateBatteryVoltage(device, unit, message['ZbReceived'][key]['BatteryVoltage'], friendlyname)
-                if 'LinkQuality' in message['ZbReceived'][key]:
-                    updateLinkQuality(device, unit, message['ZbReceived'][key]['LinkQuality'], friendlyname)
-                if '0006!42' in message['ZbReceived'][key]: # power on with timed off command
-                    timedSwitch(device, unit, message['ZbReceived'][key]['PowerOnTime'], message['ZbReceived'][key]['PowerOffWait'], message['ZbReceived'][key]['PowerOnlyWhenOn'], friendlyname)
-                elif 'Power' in message['ZbReceived'][key]:
-                    updateSwitch(device, unit, message['ZbReceived'][key]['Power'], friendlyname)
-                if 'Dimmer' in message['ZbReceived'][key]:
-                    updateDimmer(device, unit, message['ZbReceived'][key]['Dimmer'], friendlyname)
-                if 'Water' in message['ZbReceived'][key]:
-                    updateSwitch(device, unit, message['ZbReceived'][key]['Water'], friendlyname)
-                if 'Occupancy' in message['ZbReceived'][key]:
-                    updateSwitch(device, unit, message['ZbReceived'][key]['Occupancy'], friendlyname)
-                if 'Illuminance' in message['ZbReceived'][key]:
-                    updateLightsensor(device, unit, message['ZbReceived'][key]['Illuminance'], friendlyname)
-                if 'RMSCurrent' in message['ZbReceived'][key]: # "Current (Single)" (243 - 23)  "Voltage" (243 - 8) "kWh" (243 - 29) Options={'EnergyMeterMode': '1' } calculated
-                    updateSimpledev(device + 'A', unit, message['ZbReceived'][key]['RMSCurrent'], friendlyname+' Ampere', 'Current (Single)')
-                if 'RMSVoltage' in message['ZbReceived'][key]:
-                    updateSimpledev(device + 'V', unit, message['ZbReceived'][key]['RMSVoltage'], friendlyname+' Volt', 'Voltage')
-                if 'ActivePower' in message['ZbReceived'][key]:
-                    updateActivePower(device + 'W', unit, message['ZbReceived'][key]['ActivePower'], friendlyname)
-                if 'CurrentSummationDelivered' in message['ZbReceived'][key]:
-                    updateCurrentSummation(device + 'W', unit, message['ZbReceived'][key]['CurrentSummationDelivered'], friendlyname)
-                if 'Custom' in message['ZbReceived'][key]: # add custom value in .zb file in gateway
-                    updateSimpledev(device + 'C', unit, message['ZbReceived'][key]['Custom'], friendlyname, 'Custom')
+            msg = message['ZbReceived']
+        else:
+            keys = list(message.keys())
+            msg = message
+        for key in keys:
+            device = msg[key]['Device']
+            if 'Name' in msg[key]:
+                friendlyname = msg[key]['Name']
+            else:
+                friendlyname = msg[key]['Device']
+            if 'Endpoint' in msg[key]:
+                unit = msg[key]['Endpoint']
+            else:
+                unit = 1
+            if 'Temperature' in msg[key]:
+                updateTemp(device, unit ,msg[key]['Temperature'], friendlyname)
+            if 'Humidity' in msg[key]:
+                updateHumidity(device, unit, msg[key]['Humidity'], friendlyname)
+            if 'BatteryPercentage' in msg[key]:
+                updateBatteryPercentage(device, unit, msg[key]['BatteryPercentage'], friendlyname)
+            if 'BatteryVoltage' in msg[key]:
+                updateBatteryVoltage(device, unit, msg[key]['BatteryVoltage'], friendlyname)
+            if 'LinkQuality' in msg[key]:
+                updateLinkQuality(device, unit, msg[key]['LinkQuality'], friendlyname)
+            if '0006!42' in msg[key]: # power on with timed off command
+                timedSwitch(device, unit, msg[key]['PowerOnTime'], msg[key]['PowerOffWait'], msg[key]['PowerOnlyWhenOn'], friendlyname)
+            elif 'Power' in msg[key]:
+                updateSwitch(device, unit, msg[key]['Power'], friendlyname)
+            if 'Dimmer' in msg[key]:
+                updateDimmer(device, unit, msg[key]['Dimmer'], friendlyname)
+            if 'Water' in msg[key]:
+                updateSwitch(device, unit, msg[key]['Water'], friendlyname)
+            if 'Occupancy' in msg[key]:
+                updateSwitch(device, unit, msg[key]['Occupancy'], friendlyname)
+            if 'Illuminance' in msg[key]:
+                updateLightsensor(device, unit, msg[key]['Illuminance'], friendlyname)
+            if 'RMSCurrent' in msg[key]: # "Current (Single)" (243 - 23)  "Voltage" (243 - 8) "kWh" (243 - 29) Options={'EnergyMeterMode': '1' } calculated
+                updateSimpledev(device + 'A', unit, msg[key]['RMSCurrent'], friendlyname+' Ampere', 'Current (Single)')
+            if 'RMSVoltage' in msg[key]:
+                updateSimpledev(device + 'V', unit, msg[key]['RMSVoltage'], friendlyname+' Volt', 'Voltage')
+            if 'ActivePower' in msg[key]:
+                updateActivePower(device + 'W', unit, msg[key]['ActivePower'], friendlyname)
+            if 'CurrentSummationDelivered' in msg[key]:
+                updateCurrentSummation(device + 'W', unit, msg[key]['CurrentSummationDelivered'], friendlyname)
+            if 'Custom' in msg[key]: # add custom value in .zb file in gateway
+                updateSimpledev(device + 'C', unit, msg[key]['Custom'], friendlyname, 'Custom')
 
     def checkTimeoutDevices(self, timeout):
         now = time.time()
