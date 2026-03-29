@@ -93,7 +93,10 @@ class Handler:
             keys = list(message.keys())
             msg = message
         for key in keys:
-            device = msg[key]['Device']
+            if 'Device' in msg[key]:
+                device = msg[key]['Device']
+            else:
+                continue
             if 'Name' in msg[key]:
                 friendlyname = msg[key]['Name']
             else:
