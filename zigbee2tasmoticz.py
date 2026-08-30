@@ -137,6 +137,9 @@ class Handler:
                 updateCurrentSummation(device + 'W', unit, msg[key]['CurrentSummationDelivered'], friendlyname)
             if 'Custom' in msg[key]: # add custom value in .zb file in gateway
                 updateSimpledev(device + 'C', unit, msg[key]['Custom'], friendlyname, 'Custom')
+            if 'Contact' in msg[key]:
+                # Contact sensors: 1=open, 0=closed
+                updateContact(device, unit, msg[key]['Contact'], friendlyname)
 
     def checkTimeoutDevices(self, timeout):
         now = time.time()
@@ -360,3 +363,26 @@ def createDevice(deviceid, unit, devicetype, name, nvalue, svalue):
     Devices[deviceid].Units[unit].sValue = svalue
     Devices[deviceid].Units[unit].Update(Log=True)
 
+
+def updateContact(shortaddr, endpoint, contact, friendlyname):
+    """Handle contact sensors. contact: 1=open, 0=closed"""
+    create = True
+    try:
+        cval = int(contact)
+    except Exception:
+        cval = 0
+    s = "Open" if cval == 1 else "Closed"
+    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
+        if Devices[shortaddr].TimedOut == 1:
+            Devices[shortaddr].TimedOut = 0
+        # If it's already a switch-type device, update it accordingly
+        if Devices[shortaddr].Units[endpoint].Type == 244:
+            Devices[shortaddr].Units[endpoint].nValue = cval
+            # keep sValue human friendly for contact sensors
+            Devices[shortaddr].Units[endpoint].sValue = s
+            Devices[shortaddr].Units[endpoint].Update(Log=True)
+            Domoticz.Log("Update {} {} Contact {}".format(friendlyname, endpoint, s))
+            create = False
+    if create:
+        # create as a simple Switch device for contact sensors
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Switch", name=friendlyname, nvalue=cval, svalue=s)
