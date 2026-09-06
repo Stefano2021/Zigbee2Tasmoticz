@@ -72,6 +72,32 @@ class Handler:
                 if Level > 0 and Devices[DeviceID].Units[Unit].nValue == 0: #we need to switch it on if it was off
                     payload="{ \"device\":"+DeviceID+", \"send\":{\"Power\":1} }"
                     self.mqttClient.publish(topic, payload)
+        elif Devices[DeviceID].Units[Unit].Type == 245:  # Blinds
+            if Command == "On":  # Close blinds
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":0} }"
+                topic = self.prefix[1]+"/ZbSend"
+                Domoticz.Log("Send Close Command to {}".format(Devices[DeviceID].Units[Unit].Name))
+                Debug("Publish topic {} payload {}".format(topic,payload))
+                self.mqttClient.publish(topic, payload)
+            elif Command == "Off":  # Open blinds
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":100} }"
+                topic = self.prefix[1]+"/ZbSend"
+                Domoticz.Log("Send Open Command to {}".format(Devices[DeviceID].Units[Unit].Name))
+                Debug("Publish topic {} payload {}".format(topic,payload))
+                self.mqttClient.publish(topic, payload)
+            elif Command == "Set Level":  # Set position
+                position = int(Level)
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":"+str(position)+"} }"
+                topic = self.prefix[1]+"/ZbSend"
+                Domoticz.Log("Send Set Position {} to {}".format(position, Devices[DeviceID].Units[Unit].Name))
+                Debug("Publish topic {} payload {}".format(topic,payload))
+                self.mqttClient.publish(topic, payload)
+            elif Command == "Stop":  # Stop blinds
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Stop\":1} }"
+                topic = self.prefix[1]+"/ZbSend"
+                Domoticz.Log("Send Stop Command to {}".format(Devices[DeviceID].Units[Unit].Name))
+                Debug("Publish topic {} payload {}".format(topic,payload))
+                self.mqttClient.publish(topic, payload)
         return True
 
     # Subscribe to our topics
@@ -121,6 +147,8 @@ class Handler:
                 updateSwitch(device, unit, msg[key]['Power'], friendlyname)
             if 'Dimmer' in msg[key]:
                 updateDimmer(device, unit, msg[key]['Dimmer'], friendlyname)
+            if 'Position' in msg[key]:  # Blinds position (0-100)
+                updateBlinds(device, unit, msg[key]['Position'], friendlyname)
             if 'Water' in msg[key]:
                 updateSwitch(device, unit, msg[key]['Water'], friendlyname)
             if 'Occupancy' in msg[key]:
@@ -354,6 +382,27 @@ def updateDimmer(shortaddr, endpoint, dimmer, friendlyname): #dimmers are not cr
             Devices[shortaddr].Units[endpoint].sValue = str(int(round(dimmer/2.55)))
             Devices[shortaddr].Units[endpoint].Update(Log=True)
             Domoticz.Log("Update {} {} Dimmer {}".format(friendlyname,endpoint,str(int(round(dimmer/2.55)))))
+
+
+def updateBlinds(shortaddr, endpoint, position, friendlyname):
+    """Handle motorized blinds with position control (0-100)"""
+    create = True
+    try:
+        pos = int(position)
+    except Exception:
+        pos = 0
+    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
+        if Devices[shortaddr].TimedOut == 1:
+            Devices[shortaddr].TimedOut = 0
+        if Devices[shortaddr].Units[endpoint].Type == 245:  # Blinds type
+            Devices[shortaddr].Units[endpoint].nValue = 0
+            Devices[shortaddr].Units[endpoint].sValue = str(pos)
+            Devices[shortaddr].Units[endpoint].Update(Log=True)
+            Domoticz.Log("Update {} {} Position {}%".format(friendlyname, endpoint, pos))
+            create = False
+    if create:
+        # create as Blinds device
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Blinds", name=friendlyname, nvalue=0, svalue=str(pos))
 
 
 def createDevice(deviceid, unit, devicetype, name, nvalue, svalue):
