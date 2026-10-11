@@ -135,6 +135,8 @@ class Handler:
                 unit = 1
             if 'Temperature' in msg[key]:
                 updateTemp(device, unit ,msg[key]['Temperature'], friendlyname)
+            if 'OccupiedHeatingSetpoint'
+                updateOccupiedHeatingSetpoint(device, unit ,msg[key]['OccupiedHeatingSetpoint'], friendlyname)
             if 'Humidity' in msg[key]:
                 updateHumidity(device, unit, msg[key]['Humidity'], friendlyname)
             if 'BatteryPercentage' in msg[key]:
@@ -169,7 +171,7 @@ class Handler:
                 updateSimpledev(device + 'C', unit, msg[key]['Custom'], friendlyname, 'Custom')
             if 'Contact' in msg[key]:
                 # Contact sensors: 1=open, 0=closed
-                updateContact(device, unit, msg[key]['Contact'], friendlyname)
+                updateContact(device, unit, msg[key]['Contact'], friendlyname) 
 
     def checkTimeoutDevices(self, timeout):
         now = time.time()
@@ -224,6 +226,20 @@ def updateTemp(shortaddr, endpoint, temperature, friendlyname):
         create=False
     if create:
         createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Temperature",name=friendlyname,nvalue=0,svalue="{:.1f}".format(temperature))
+        
+def updateOccupiedHeatingSetpoint(shortaddr, endpoint, temperature, friendlyname):
+    create=True
+    if shortaddr in Devices and endpoint in Devices[shortaddr].Units:
+        if Devices[shortaddr].TimedOut == 1:
+            Devices[shortaddr].TimedOut = 0
+        if Devices[shortaddr].Units[endpoint].Type == 80: #Temperature
+            Devices[shortaddr].Units[endpoint].nValue = 0
+            Devices[shortaddr].Units[endpoint].sValue = "{:.1f}".format(temperature)
+            Devices[shortaddr].Units[endpoint].Update(Log=True)
+            Domoticz.Log("Update {} {} Temp {}".format(friendlyname,endpoint,temperature))
+        create=False
+    if create:
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Thermostat",name=friendlyname,nvalue=0,svalue="{:.1f}".format(temperature))
 
 
 def updateHumidity(shortaddr, endpoint, humidity, friendlyname):
