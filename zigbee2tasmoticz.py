@@ -135,7 +135,7 @@ class Handler:
                 unit = 1
             if 'Temperature' in msg[key]:
                 updateTemp(device, unit ,msg[key]['Temperature'], friendlyname)
-            if 'OccupiedHeatingSetpoint'
+            if 'OccupiedHeatingSetpoint'in msg[key]:
                 updateOccupiedHeatingSetpoint(device, unit ,msg[key]['OccupiedHeatingSetpoint'], friendlyname)
             if 'Humidity' in msg[key]:
                 updateHumidity(device, unit, msg[key]['Humidity'], friendlyname)
