@@ -56,7 +56,9 @@ class Handler:
     def onDomoticzCommand(self, DeviceID, Unit, Command, Level, Color):
         Debug("Handler::onDomoticzCommand: DeviceID: {}, Unit: {}, Command: {}, Level: {}, Color: {}".format(
             DeviceID, Unit, Command, Level, Color))
-        if Devices[DeviceID].Units[Unit].Type == 244:
+        Debug(Devices[DeviceID].Units[Unit].Type)
+        Debug(Devices[DeviceID].Units[Unit].SwitchType)
+        if Devices[DeviceID].Units[Unit].Type == 244 and (Devices[DeviceID].Units[Unit].SwitchType == 0 or Devices[DeviceID].Units[Unit].SwitchType == 7):
             if Command == "On" or Command == "Off":
                 payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Power\":\""+Command+"\"} }"
                 topic = self.prefix[1]+"/ZbSend"
@@ -72,22 +74,22 @@ class Handler:
                 if Level > 0 and Devices[DeviceID].Units[Unit].nValue == 0: #we need to switch it on if it was off
                     payload="{ \"device\":"+DeviceID+", \"send\":{\"Power\":1} }"
                     self.mqttClient.publish(topic, payload)
-        elif Devices[DeviceID].Units[Unit].Type == 245:  # Blinds
-            if Command == "On":  # Close blinds
-                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":0} }"
+        elif Devices[DeviceID].Units[Unit].Type == 244 and Devices[DeviceID].Units[Unit].SwitchType == 21:
+            if Command == "Close":  # Close blinds
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Shutter\":\"close\"}}"
                 topic = self.prefix[1]+"/ZbSend"
                 Domoticz.Log("Send Close Command to {}".format(Devices[DeviceID].Units[Unit].Name))
                 Debug("Publish topic {} payload {}".format(topic,payload))
                 self.mqttClient.publish(topic, payload)
-            elif Command == "Off":  # Open blinds
-                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":100} }"
+            elif Command == "Open":  # Open blinds
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Shutter\":\"open\"}}"
                 topic = self.prefix[1]+"/ZbSend"
                 Domoticz.Log("Send Open Command to {}".format(Devices[DeviceID].Units[Unit].Name))
                 Debug("Publish topic {} payload {}".format(topic,payload))
                 self.mqttClient.publish(topic, payload)
             elif Command == "Set Level":  # Set position
                 position = int(Level)
-                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"Position\":"+str(position)+"} }"
+                payload="{ \"Device\":"+DeviceID+", \"Send\":{\"ShutterLift\":"+str(position)+"} }"
                 topic = self.prefix[1]+"/ZbSend"
                 Domoticz.Log("Send Set Position {} to {}".format(position, Devices[DeviceID].Units[Unit].Name))
                 Debug("Publish topic {} payload {}".format(topic,payload))
@@ -147,8 +149,8 @@ class Handler:
                 updateSwitch(device, unit, msg[key]['Power'], friendlyname)
             if 'Dimmer' in msg[key]:
                 updateDimmer(device, unit, msg[key]['Dimmer'], friendlyname)
-            if 'Position' in msg[key]:  # Blinds position (0-100)
-                updateBlinds(device, unit, msg[key]['Position'], friendlyname)
+            if 'CurrentPositionLiftPercentage' in msg[key]:  # Blinds position (0-100)
+                updateBlinds(device, unit, msg[key]['CurrentPositionLiftPercentage'], friendlyname)
             if 'Water' in msg[key]:
                 updateSwitch(device, unit, msg[key]['Water'], friendlyname)
             if 'Occupancy' in msg[key]:
@@ -402,7 +404,7 @@ def updateBlinds(shortaddr, endpoint, position, friendlyname):
             create = False
     if create:
         # create as Blinds device
-        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="Blinds", name=friendlyname, nvalue=0, svalue=str(pos))
+        createDevice(deviceid=shortaddr, unit=endpoint, devicetype="BlindsPercentageWithStop", name=friendlyname, nvalue=0, svalue=str(pos))
 
 
 def createDevice(deviceid, unit, devicetype, name, nvalue, svalue):
